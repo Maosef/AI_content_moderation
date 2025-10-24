@@ -1,0 +1,28 @@
+[project]
+name = "TLDD"
+version = "0.1.0"
+description = ""
+requires-python = "==3.11.*"
+dependencies = [
+    "transformers",
+    "datasets",
+    "trl",
+    "peft",
+    "accelerate",
+    "sentence-transformers",
+    "openai",
+    "tqdm",
+    "numpy",
+    
+    "lm-eval",
+    "langchain",
+    "langchain_community",
+    "chromadb"
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["golden"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
