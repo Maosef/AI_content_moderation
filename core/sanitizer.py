@@ -19,7 +19,8 @@ def sanitize_query(
     use_rag: bool,
     sanitizer_backend: str,
     sanitizer_model: str,
-    temperature: float = DEFAULT_SANITIZER_TEMPERATURE
+    temperature: float = DEFAULT_SANITIZER_TEMPERATURE,
+    system_prompt: str = ""
 ) -> str:
     """
     Sanitize user query using TLDD.
@@ -30,10 +31,14 @@ def sanitize_query(
         sanitizer_backend: "OpenAI" or "Ollama"
         sanitizer_model: Model name for sanitizer
         temperature: Generation temperature
+        system_prompt: Custom system prompt (optional, defaults to DEFAULT_SYSTEM_PROMPT)
         
     Returns:
         Sanitized query string
     """
+    # Use custom system prompt or default
+    prompt = system_prompt if system_prompt else DEFAULT_SYSTEM_PROMPT
+    
     # Get sanitizer client
     sanitizer_client, model = get_llm_client(sanitizer_backend, sanitizer_model)
     
@@ -49,7 +54,7 @@ def sanitize_query(
                 return sanitized
     
     sanitized = llm_generate(
-        sanitizer_client, model, DEFAULT_SYSTEM_PROMPT, query,
+        sanitizer_client, model, prompt, query,
         temperature=temperature, max_tokens=DEFAULT_SANITIZER_MAX_TOKENS
     )
     return sanitized if sanitized else query
