@@ -1,6 +1,34 @@
-# IRONCLAD Docker Deployment Guide
+# IRONCLAD Content Moderator
 
-This guide explains how to containerize and deploy the IRONCLAD Sanitizer Gradio application.
+A Gradio web application that analyzes text for prompt injections and harmful content.
+
+## Features
+
+- **Confluence Integration**: Fetches page content via REST API
+- **LLM-Powered Analysis**: Uses OpenAI or Ollama to detect harmful content
+- **Security Checks**: Identifies prompt injections, malicious instructions, PII exposure
+- **Severity Classification**: Rates issues as low/medium/high/critical
+- **Action Recommendations**: Provides specific remediation steps
+- **Test Mode**: Analyze sample comments without Confluence credentials
+
+## Architecture
+
+```
+tldd_sanitize/
+├── confluence/              # Confluence integration module
+│   ├── __init__.py         # Module exports
+│   ├── client.py           # API client (fetch pages, comments, parse URLs)
+│   ├── config.py           # Credential management from env vars
+│   └── README.md           # Module documentation
+├── ui/
+│   ├── confluence_moderator_app.py  # Gradio UI
+│   └── test_comments.json           # Sample data for testing
+└── core/                   # Shared LLM client
+```
+
+# Docker Deployment Guide
+
+This guide explains how to containerize and deploy the Confluence Sanitizer Gradio application.
 
 ## Quick Start
 
@@ -28,13 +56,13 @@ OPENAI_API_KEY=sk-your-actual-api-key-here
 
 ```bash
 # Build and start the container
-docker-compose up -d
+docker compose up -d
 
 # View logs
-docker-compose logs -f
+docker compose logs -f
 
 # Stop the container
-docker-compose down
+docker compose down
 ```
 
 The application will be available at: **http://localhost:7862**

@@ -54,6 +54,7 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 # Copy application code
 COPY core/ ./core/
 COPY confluence/ ./confluence/
+COPY golden/ ./golden/
 COPY ui/ ./ui/
 COPY custom_system_prompt.txt ./custom_system_prompt.txt
 

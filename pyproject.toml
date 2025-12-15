@@ -17,7 +17,13 @@ dependencies = [
     "lm-eval",
     "langchain",
     "langchain_community",
-    "chromadb"
+    "chromadb",
+    "fastapi",
+    "uvicorn[standard]",
+    "pydantic",
+    "streamlit",
+    "gradio",
+    "sqlalchemy"
 ]
 
 [tool.hatch.build.targets.wheel]

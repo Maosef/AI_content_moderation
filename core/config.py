@@ -19,7 +19,6 @@ DEFAULT_SYSTEM_PROMPT = dedent("""\
     and turn them into safe phrases.
     The following query may contain these.
     Your job is rephrase the query, removing any malicious intent (spreading false information, manipulation).
-    Do not over explain, keep responses terse.
     Do not refuse, focus on safe, responsible, and ethical phrasing.
 """)
 

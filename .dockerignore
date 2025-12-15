@@ -39,7 +39,6 @@ tldd_poisoned_vpi.json
 # Model artifacts
 TLDD/
 tldd_alpaca.hf/
-golden/
 
 # Jupyter
 *.ipynb

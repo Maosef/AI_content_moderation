@@ -13,7 +13,7 @@ import json
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core import DEFAULT_LLM_TEMPERATURE, DEFAULT_SANITIZER_TEMPERATURE, DEFAULT_MAX_TOKENS, DEFAULT_SYSTEM_PROMPT
-from SAFEGUARD import process_and_rewrite_comments as _process_and_rewrite, rewrite_all_comments as _rewrite_all
+from confluence import process_and_rewrite_comments as _process_and_rewrite, rewrite_all_comments as _rewrite_all
 
 
 def load_test_content():
@@ -133,8 +133,7 @@ def create_ui():
                         lines=8,
                         max_lines=15,
                         label="Content Preview",
-                        interactive=False,
-                        show_copy_button=True
+                        interactive=False
                     )
                     
                     rewrite_all_btn = gr.Button(
@@ -176,8 +175,7 @@ def create_ui():
                     lines=10,
                     max_lines=20,
                     placeholder="Enter custom system prompt for the rewriter...",
-                    info="This prompt guides how content is rewritten",
-                    show_copy_button=True
+                    info="This prompt guides how content is rewritten"
                 )
                 
                 with gr.Row():
