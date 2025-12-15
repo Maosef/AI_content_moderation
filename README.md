@@ -1,6 +1,6 @@
-# Docker Deployment Guide
+# IRONCLAD Docker Deployment Guide
 
-This guide explains how to containerize and deploy the IRONCLAD Content Sanitizer Gradio application.
+This guide explains how to containerize and deploy the IRONCLAD Sanitizer Gradio application.
 
 ## Quick Start
 
