@@ -1,6 +1,6 @@
 # Docker Deployment Guide
 
-This guide explains how to containerize and deploy the SAFEGUARD Content Rewriter Gradio application.
+This guide explains how to containerize and deploy the IRONCLAD Content Sanitizer Gradio application.
 
 ## Quick Start
 
