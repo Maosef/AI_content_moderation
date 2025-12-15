@@ -13,7 +13,6 @@ dependencies = [
     "openai",
     "tqdm",
     "numpy",
-    
     "lm-eval",
     "langchain",
     "langchain_community",

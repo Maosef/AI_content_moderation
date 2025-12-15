@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 """
-Gradio SAFEGUARD Content Rewriter
-Analyzes test content, detects harmful content, and rewrites them using AI sanitization
+Gradio SAFEGUARD Passage Rewriter
+Analyzes test passages, detects harmful content, and rewrites them using AI sanitization
 """
 
 import gradio as gr
@@ -23,19 +23,17 @@ def load_test_content():
         with open(test_file, 'r') as f:
             data = json.load(f)
             comments = data.get('results', [])
-            
-            # Format as readable rows
+
+            # Format as readable passages with full content
             formatted = ""
-            for idx, comment in enumerate(comments, 1):
+            for comment in comments:
                 comment_id = comment.get('id', 'Unknown')
                 body = comment.get('body', '')
-                # Truncate long content
-                preview = body[:100] + "..." if len(body) > 100 else body
-                formatted += f"{idx}. ID: {comment_id}\n   {preview}\n\n"
-            
-            return formatted if formatted else "No content found"
+                formatted += f"Passage {comment_id}:\n{body}\n\n"
+
+            return formatted if formatted else "No passages found"
     except Exception as e:
-        return f"Error loading content: {str(e)}"
+        return f"Error loading passages: {str(e)}"
 
 
 def process_with_moderation_ui(
@@ -47,7 +45,7 @@ def process_with_moderation_ui(
     progress=gr.Progress()
 ):
     """Wrapper for moderation + rewriting with progress tracking"""
-    status_msg = "⏳ **Processing started...** Analyzing and rewriting content."
+    status_msg = "⏳ **Processing started...** Analyzing and rewriting passages."
     yield status_msg, ""
     
     # Use default moderation temperature
@@ -74,8 +72,8 @@ def rewrite_all_ui(
     system_prompt: str,
     progress=gr.Progress()
 ):
-    """Wrapper for rewriting all content without moderation"""
-    status_msg = "⏳ **Processing started...** Rewriting all content."
+    """Wrapper for rewriting all passages without moderation"""
+    status_msg = "⏳ **Processing started...** Rewriting all passages."
     yield status_msg, ""
     
     result = _rewrite_all(
@@ -119,93 +117,152 @@ def load_system_prompt():
 
 def create_ui():
     """Create Gradio UI for SAFEGUARD content rewriting"""
-    with gr.Blocks(title="SAFEGUARD Content Rewriter") as demo:
-        gr.Markdown("# 🔄 SAFEGUARD Content Rewriter")
-        gr.Markdown("Analyze and rewrite test content using AI sanitization")
+
+    # Custom CSS to increase UI size and optimize 3-column layout
+    custom_css = """
+    .gradio-container {
+        font-size: 18px !important;
+        max-width: 98% !important;
+    }
+    button {
+        font-size: 18px !important;
+        padding: 12px 24px !important;
+        min-height: 50px !important;
+    }
+    .gr-button {
+        font-size: 18px !important;
+    }
+    label {
+        font-size: 18px !important;
+        font-weight: 600 !important;
+    }
+    .gr-text-input, .gr-textbox, textarea {
+        font-size: 18px !important;
+        line-height: 1.6 !important;
+    }
+    /* Make content/passage text even larger */
+    textarea {
+        font-size: 20px !important;
+    }
+    h1 {
+        font-size: 2.5em !important;
+        margin: 10px 0 !important;
+    }
+    h2 {
+        font-size: 1.8em !important;
+        margin: 15px 0 10px 0 !important;
+    }
+    h3 {
+        font-size: 1.4em !important;
+        margin: 10px 0 8px 0 !important;
+    }
+    .gr-markdown {
+        font-size: 18px !important;
+        line-height: 1.6 !important;
+    }
+    .gr-markdown p {
+        margin: 8px 0 !important;
+    }
+    .gr-markdown ul, .gr-markdown ol {
+        margin: 5px 0 !important;
+    }
+    /* Make accordion labels more compact */
+    .gr-accordion {
+        font-size: 16px !important;
+    }
+    /* Reduce spacing in results */
+    .gr-markdown hr {
+        margin: 15px 0 !important;
+    }
+    """
+
+    with gr.Blocks(title="IRONCLAD Passage Rewriter", css=custom_css) as demo:
+        gr.Markdown("# 🔄 IRONCLAD Passage Rewriter")
+        gr.Markdown("Analyze and rewrite test passages using AI sanitization")
         
         with gr.Row():
+            # Left column: Passage Preview
             with gr.Column(scale=2):
-                with gr.Tab("Rewrite All"):                    
-                    # Show test content preview
-                    gr.Markdown("### 📄 Content (from test_comments.json)")
-                    test_content_display = gr.Textbox(
-                        value=load_test_content(),
-                        lines=8,
-                        max_lines=15,
-                        label="Content Preview",
-                        interactive=False
-                    )
-                    
+                gr.Markdown("### 📄 Passages (from test_comments.json)")
+                test_content_display = gr.Textbox(
+                    value=load_test_content(),
+                    lines=20,
+                    max_lines=40,
+                    label="Passage Preview",
+                    interactive=False
+                )
+
+                with gr.Row():
                     rewrite_all_btn = gr.Button(
-                        "✏️ Rewrite All Content",
+                        "✏️ Rewrite All Passages",
                         variant="primary",
                         size="lg"
                     )
-                
-                with gr.Tab("Analyze & Rewrite"):
-                    gr.Markdown("**Analyze content first, then rewrite only harmful ones**")
                     rewrite_harmful_btn = gr.Button(
-                        "🔄 Analyze & Rewrite Harmful Content",
+                        "🔄 Analyze & Rewrite Harmful",
                         variant="secondary",
                         size="lg"
                     )
-                
-                status_indicator = gr.Markdown("")
-                output = gr.Markdown(label="Results: Before & After")
-            
-            with gr.Column(scale=1):
-                gr.Markdown("## ⚙️ Configuration")
-                
-                backend = gr.Dropdown(
-                    choices=["OpenAI", "Ollama"],
-                    value="OpenAI",
-                    label="LLM Backend"
-                )
-                
-                ollama_model = gr.Textbox(
-                    label="Ollama Model",
-                    value="llama2",
-                    visible=False
-                )
-                
-                gr.Markdown("### 🎨 System Prompt")
-                system_prompt = gr.Textbox(
-                    label="System Prompt for Rewriting",
-                    value=load_system_prompt(),
-                    lines=10,
-                    max_lines=20,
-                    placeholder="Enter custom system prompt for the rewriter...",
-                    info="This prompt guides how content is rewritten"
-                )
-                
-                with gr.Row():
-                    save_prompt_btn = gr.Button("💾 Save Prompt", size="sm")
-                    reset_prompt_btn = gr.Button("🔄 Reset to Default", size="sm")
-                
-                save_status = gr.Markdown("")
-                
-                use_rag = gr.Checkbox(
-                    label="Use Reference Corpus (UltraFeedback, RAG)",
-                    value=False,
-                    info="Optional: Use safe examples to guide rewriting"
-                )
 
-                rewrite_temperature = gr.Slider(
-                    minimum=0.0,
-                    maximum=1.0,
-                    value=DEFAULT_SANITIZER_TEMPERATURE,
-                    step=0.1,
-                    label="Rewrite Temperature",
-                    info="Lower values (0.1-0.3) for consistent rewrites"
-                )
-                
-                max_tokens = gr.Slider(
-                    minimum=256,
-                    maximum=4096,
-                    value=1024,
-                    step=256,
-                    label="Max Tokens"
-                )
+            # Middle column: Results
+            with gr.Column(scale=2):
+                gr.Markdown("### 📊 Passage Rewriting Results")
+                status_indicator = gr.Markdown("")
+                output = gr.Markdown(label="Results")
+
+            # Right sidebar: Configuration (collapsible)
+            with gr.Column(scale=1, min_width=300):
+                with gr.Accordion("⚙️ Configuration", open=True):
+                    backend = gr.Dropdown(
+                        choices=["OpenAI", "Ollama"],
+                        value="OpenAI",
+                        label="LLM Backend"
+                    )
+
+                    ollama_model = gr.Textbox(
+                        label="Ollama Model",
+                        value="llama2",
+                        visible=False
+                    )
+
+                    gr.Markdown("**System Prompt**")
+                    system_prompt = gr.Textbox(
+                        label="System Prompt for Rewriting",
+                        value=load_system_prompt(),
+                        lines=8,
+                        max_lines=15,
+                        placeholder="Enter custom system prompt for the rewriter...",
+                        info="This prompt guides how passages are rewritten"
+                    )
+
+                    with gr.Row():
+                        save_prompt_btn = gr.Button("💾 Save", size="sm")
+                        reset_prompt_btn = gr.Button("🔄 Reset", size="sm")
+
+                    save_status = gr.Markdown("")
+
+                    use_rag = gr.Checkbox(
+                        label="Use Reference Corpus (RAG)",
+                        value=False,
+                        info="Use safe examples to guide rewriting"
+                    )
+
+                    rewrite_temperature = gr.Slider(
+                        minimum=0.0,
+                        maximum=1.0,
+                        value=DEFAULT_SANITIZER_TEMPERATURE,
+                        step=0.1,
+                        label="Rewrite Temperature",
+                        info="Lower = more consistent"
+                    )
+
+                    max_tokens = gr.Slider(
+                        minimum=256,
+                        maximum=4096,
+                        value=1024,
+                        step=256,
+                        label="Max Tokens"
+                    )
         
         def update_backend_visibility(backend_choice):
             return gr.update(visible=(backend_choice == "Ollama"))
@@ -258,58 +315,33 @@ def create_ui():
         )
         
         gr.Markdown("""
-        ### 📝 Two Modes Available
-        
-        **1. Rewrite All (Recommended)**
-        - Rewrites ALL content without analyzing them first
-        - Faster processing
-        - Uses the custom system prompt
-        - Good for blanket sanitization
-        - Shows system prompt in output
-        
-        **2. Analyze & Rewrite**
-        - First analyzes each content for harmful material
-        - Only rewrites content detected as harmful
-        - Slower but more selective
-        - Shows moderation analysis results
-        
-        ### 🎨 System Prompt
-        
-        The system prompt is now always visible and guides how content is rewritten:
-        - Edit the prompt text directly
-        - Click "Save Prompt" to persist changes
-        - Click "Reset to Default" to restore original
-        - The prompt will be shown in the output when using "Rewrite All" mode
-        
+        ---
+        ### 📝 Two Modes
+
+        **Rewrite All Passages** - Rewrites ALL passages using the system prompt (faster)
+
+        **Analyze & Rewrite Harmful** - First analyzes, then only rewrites harmful passages (selective)
+
         ### 🔧 Setup
-        
-        **Required Environment Variables:**
-        ```bash
-        export OPENAI_API_KEY="sk-..."  # For OpenAI backend
-        # OR configure Ollama locally for Ollama backend
-        ```
-        
-        ### 📊 Output
-        
-        For each content item, you'll see:
-        - **Original Content:** The raw text
-        - **Rewritten Content:** Sanitized version
-        - *(Rewrite All)* System prompt used
-        - *(Analyze & Rewrite only)* Moderation analysis with severity level
-        
-        ### 🧪 Test Data
-        
-        The app processes 4 sample content items from `ui/test_comments.json`
+
+        Set environment variable: `export OPENAI_API_KEY="sk-..."`
+
+        ### 📊 Layout
+
+        **Left:** Passage Preview | **Middle:** Results | **Right:** Configuration (collapsible)
         """)
     
     return demo
 
 
+# Create demo at module level for Gradio auto-reload
+demo = create_ui()
+
 if __name__ == "__main__":
-    demo = create_ui()
     demo.launch(
         server_name="0.0.0.0",
         server_port=7862,
         share=True,
-        debug=True
+        debug=True,
+        show_error=True  # Show detailed error messages
     )

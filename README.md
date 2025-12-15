@@ -1,15 +1,14 @@
 # IRONCLAD Content Moderator
 
-A Gradio web application that analyzes text for prompt injections and harmful content.
+LLM tool that analyzes text for prompt injections and harmful content, moderates/sanitizes via rewriting.
 
 ## Features
 
-- **Confluence Integration**: Fetches page content via REST API
 - **LLM-Powered Analysis**: Uses OpenAI or Ollama to detect harmful content
-- **Security Checks**: Identifies prompt injections, malicious instructions, PII exposure
+- **Security Checks**: Identifies prompt injections, malicious instructions or harmful content
 - **Severity Classification**: Rates issues as low/medium/high/critical
-- **Action Recommendations**: Provides specific remediation steps
-- **Test Mode**: Analyze sample comments without Confluence credentials
+- **Rewriting-based Remediation**: Optional RAG over safe exemplars to guide rewriting
+- **Web application demo**: Runs out of the box with Docker Compose and Gradio
 
 ## Architecture
 
@@ -28,7 +27,7 @@ tldd_sanitize/
 
 # Docker Deployment Guide
 
-This guide explains how to containerize and deploy the Confluence Sanitizer Gradio application.
+This guide explains how to containerize and deploy the Sanitizer demo application.
 
 ## Quick Start
 
@@ -74,33 +73,33 @@ If you prefer to use Docker directly without docker-compose:
 ### Build the Image
 
 ```bash
-docker build -t safeguard-rewriter:latest .
+docker build -t ironclad-rewriter:latest .
 ```
 
 ### Run the Container
 
 ```bash
 docker run -d \
-  --name safeguard-rewriter \
+  --name ironclad-rewriter \
   -p 7862:7862 \
   -e OPENAI_API_KEY=sk-your-api-key \
   -v $(pwd)/chroma_ultrafeedback_cache:/app/chroma_ultrafeedback_cache \
   -v $(pwd)/custom_system_prompt.txt:/app/custom_system_prompt.txt \
   -v $(pwd)/ui/test_comments.json:/app/ui/test_comments.json \
-  safeguard-rewriter:latest
+  ironclad-rewriter:latest
 ```
 
 ### View Logs
 
 ```bash
-docker logs -f safeguard-rewriter
+docker logs -f ironclad-rewriter
 ```
 
 ### Stop and Remove
 
 ```bash
-docker stop safeguard-rewriter
-docker rm safeguard-rewriter
+docker stop ironclad-rewriter
+docker rm ironclad-rewriter
 ```
 
 ## Configuration
@@ -131,7 +130,7 @@ If Ollama is running in another Docker container:
 ```yaml
 # In docker-compose.yml, add:
 services:
-  safeguard-rewriter:
+  ironclad-rewriter:
     # ... existing config
     depends_on:
       - ollama
@@ -158,26 +157,6 @@ The docker-compose configuration mounts several directories/files:
    - Easily update test data without rebuilding
    - Hot-reload new test cases
 
-## Resource Limits
-
-Default resource limits in `docker-compose.yml`:
-
-- **CPU**: 1-2 cores
-- **Memory**: 2-4 GB
-
-Adjust based on your workload:
-
-```yaml
-deploy:
-  resources:
-    limits:
-      cpus: '4'
-      memory: 8G
-    reservations:
-      cpus: '2'
-      memory: 4G
-```
-
 ## Troubleshooting
 
 ### Container won't start
@@ -193,13 +172,13 @@ docker-compose config
 ### Can't connect to OpenAI
 
 - Verify `OPENAI_API_KEY` is set correctly in `.env`
-- Check network connectivity: `docker exec safeguard-rewriter curl -I https://api.openai.com`
+- Check network connectivity: `docker exec ironclad-rewriter curl -I https://api.openai.com`
 
 ### Can't connect to Ollama
 
 ```bash
 # Test Ollama connectivity from container
-docker exec safeguard-rewriter curl http://host.docker.internal:11434/api/tags
+docker exec ironclad-rewriter curl http://host.docker.internal:11434/api/tags
 
 # On Linux, you may need to use host network mode
 docker run --network host ...
@@ -220,7 +199,7 @@ chmod 644 ui/test_comments.json
 lsof -i :7862
 
 # Check container health
-docker inspect safeguard-rewriter | grep -A 10 Health
+docker inspect ironclad-rewriter | grep -A 10 Health
 ```
 
 ## Production Deployment
@@ -235,40 +214,6 @@ docker inspect safeguard-rewriter | grep -A 10 Health
    - Never commit `.env` to version control
    - Use secrets management (Docker secrets, Kubernetes secrets, etc.)
 
-3. **Resource limits**
-   - Set appropriate CPU/memory limits
-   - Monitor resource usage
-
-### Reverse Proxy Example (nginx)
-
-```nginx
-server {
-    listen 80;
-    server_name safeguard.example.com;
-
-    location / {
-        proxy_pass http://localhost:7862;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-
-        # WebSocket support for Gradio
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-    }
-}
-```
-
-### Health Check Endpoint
-
-The container includes a health check on port 7862:
-
-```bash
-curl http://localhost:7862/
-```
-
 ## Development Workflow
 
 ### Live Code Editing
@@ -277,7 +222,7 @@ Mount your source code for development:
 
 ```yaml
 services:
-  safeguard-rewriter:
+  ironclad-rewriter:
     volumes:
       - ./core:/app/core
       - ./confluence:/app/confluence
@@ -298,72 +243,5 @@ Run container with interactive shell:
 docker run -it --rm \
   --entrypoint /bin/bash \
   -e OPENAI_API_KEY=sk-your-key \
-  safeguard-rewriter:latest
+  ironclad-rewriter:latest
 ```
-
-## Cleaning Up
-
-### Remove containers and volumes
-
-```bash
-# Stop and remove containers
-docker-compose down
-
-# Remove volumes too (WARNING: deletes ChromaDB cache)
-docker-compose down -v
-```
-
-### Remove images
-
-```bash
-docker rmi safeguard-rewriter:latest
-```
-
-### Clean build cache
-
-```bash
-docker builder prune
-```
-
-## Image Size Optimization
-
-The Dockerfile uses multi-stage builds to minimize image size:
-
-- **Builder stage**: Compiles dependencies
-- **Production stage**: Only runtime files
-- **Excluded**: Virtual env, docs, test files, model artifacts
-
-Current image size: ~2-3 GB (mostly PyTorch/transformers dependencies)
-
-## CI/CD Integration
-
-### GitHub Actions Example
-
-```yaml
-name: Build and Push Docker Image
-
-on:
-  push:
-    branches: [main]
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Build Docker image
-        run: docker build -t safeguard-rewriter:${{ github.sha }} .
-
-      - name: Push to registry
-        run: |
-          echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
-          docker push safeguard-rewriter:${{ github.sha }}
-```
-
-## Support
-
-For issues or questions:
-- Check logs: `docker-compose logs`
-- Review the main README.md
-- Check Gradio documentation: https://gradio.app/docs/

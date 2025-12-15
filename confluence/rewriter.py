@@ -117,7 +117,7 @@ def process_and_rewrite_comments(
         Formatted markdown string with analysis and rewrites
     """
     def progress(value, desc=""):
-        if progress_callback:
+        if progress_callback is not None:
             progress_callback(value, desc=desc)
     
     progress(0, desc="Loading test content...")
@@ -158,11 +158,11 @@ def process_and_rewrite_comments(
         })
     
     # Build result header
-    result = f"# 🔄 Test Content Rewriting Results\n\n"
-    result += f"**Total Content:** {len(comments)}\n\n"
-    result += f"**Harmful Content Found:** {harmful_count}\n\n"
-    result += f"**Content Rewritten:** {harmful_count}\n\n"
-    result += "---\n\n"
+    result = f"<div style='font-size: 20px; line-height: 1.4;'>\n\n"
+    result += f"**Total Passages:** {len(comments)}\n\n"
+    result += f"**Harmful Passages Found:** {harmful_count}\n\n"
+    result += f"**Passages Rewritten:** {harmful_count}\n\n"
+    result += "</div>\n\n---\n\n"
     
     # Second pass: rewrite harmful content and format output
     rewritten_count = 0
@@ -175,37 +175,37 @@ def process_and_rewrite_comments(
         comment_id = comment.get('id', 'Unknown')
         body = comment.get('body', '')
         
-        result += f"## Content {idx} (ID: {comment_id})\n\n"
-        
-        # Original content
-        result += f"### 📝 Original Content\n```\n{body}\n```\n\n"
-        
+        result += f"<div style='font-size: 18px; margin: 15px 0 10px 0;'><strong>Passage {idx} (ID: {comment_id})</strong></div>\n\n"
+
+        # Original passage
+        result += f"**📝 Original Passage**\n\n<div style='font-size: 20px; background: #f5f5f5; padding: 10px; margin: 5px 0;'>{body}</div>\n\n"
+
         # Moderation analysis
-        result += f"### 🛡️ Moderation Analysis\n"
+        result += f"**🛡️ Moderation Analysis**\n"
         
         if parsed:
             severity = parsed.get('severity', 'unknown')
             issues = parsed.get('issues', [])
             recommendations = parsed.get('recommendations', [])
-            
+
             if is_harmful:
-                result += f"⚠️ **Status:** HARMFUL (`{severity.upper()}`)\n\n"
+                result += f"<div style='font-size: 20px;'>⚠️ <strong>Status:</strong> HARMFUL (<code>{severity.upper()}</code>)</div>\n\n"
                 if issues:
-                    result += "**Issues:**\n"
+                    result += "<div style='font-size: 20px;'><strong>Issues:</strong><ul style='margin: 5px 0;'>\n"
                     for issue in issues:
-                        result += f"- {issue}\n"
-                    result += "\n"
+                        result += f"<li>{issue}</li>\n"
+                    result += "</ul></div>\n\n"
             else:
-                result += f"✅ **Status:** SAFE\n\n"
+                result += f"<div style='font-size: 20px;'>✅ <strong>Status:</strong> SAFE</div>\n\n"
         else:
-            result += f"⚠️ **Status:** Unable to parse analysis\n\n"
-        
+            result += f"<div style='font-size: 20px;'>⚠️ <strong>Status:</strong> Unable to parse analysis</div>\n\n"
+
         # Rewrite if harmful
         if is_harmful:
             rewritten_count += 1
             progress(0.4 + (0.5 * rewritten_count / harmful_count),
-                    desc=f"Rewriting harmful content {rewritten_count}/{harmful_count}...")
-            
+                    desc=f"Rewriting harmful passage {rewritten_count}/{harmful_count}...")
+
             rewritten, metadata = rewrite_harmful_content(
                 body,
                 backend,
@@ -214,11 +214,11 @@ def process_and_rewrite_comments(
                 max_tokens,
                 use_rag
             )
-            
-            result += f"### ✏️ Rewritten Content\n```\n{rewritten}\n```\n\n"
+
+            result += f"**✏️ Rewritten Passage**\n\n<div style='font-size: 20px; background: #e8f5e9; padding: 10px; margin: 5px 0;'>{rewritten}</div>\n\n"
         else:
-            result += f"✅ **No rewriting needed** (content is safe)\n\n"
-        
+            result += f"<div style='font-size: 20px;'>✅ <strong>No rewriting needed</strong> (passage is safe)</div>\n\n"
+
         result += "---\n\n"
     
     progress(1.0, desc="Complete!")
@@ -256,7 +256,7 @@ def rewrite_all_comments(
         Formatted markdown string with rewrites
     """
     def progress(value, desc=""):
-        if progress_callback:
+        if progress_callback is not None:
             progress_callback(value, desc=desc)
     
     progress(0, desc="Loading test content...")
@@ -266,24 +266,24 @@ def rewrite_all_comments(
         return "❌ **Error:** Failed to load test content\n\nCheck that ui/test_comments.json exists."
     
     # Build result header with system prompt
-    result = f"# ✏️ All Content Rewriting Results\n\n"
-    result += f"**Total Content:** {len(comments)}\n\n"
-    result += f"**Content Rewritten:** {len(comments)}\n\n"
-    result += "---\n\n"
-    
-    # Rewrite all content
+    result = f"<div style='font-size: 20px; line-height: 1.4;'>\n\n"
+    result += f"**Total Passages:** {len(comments)}\n\n"
+    result += f"**Passages Rewritten:** {len(comments)}\n\n"
+    result += "</div>\n\n---\n\n"
+
+    # Rewrite all passages
     for idx, comment in enumerate(comments, 1):
-        progress(idx / len(comments), 
-                desc=f"Rewriting content {idx}/{len(comments)}...")
-        
+        progress(idx / len(comments),
+                desc=f"Rewriting passage {idx}/{len(comments)}...")
+
         comment_id = comment.get('id', 'Unknown')
         body = comment.get('body', '')
-        
-        result += f"## Content {idx} (ID: {comment_id})\n\n"
-        
-        # Original content
-        result += f"### 📝 Original Content\n```\n{body}\n```\n\n"
-        
+
+        result += f"<div style='font-size: 18px; margin: 15px 0 10px 0;'><strong>Passage {idx} (ID: {comment_id})</strong></div>\n\n"
+
+        # Original passage
+        result += f"**📝 Original Passage**\n\n<div style='font-size: 20px; background: #f5f5f5; padding: 10px; margin: 5px 0;'>{body}</div>\n\n"
+
         # Rewrite
         rewritten, metadata = rewrite_harmful_content(
             body,
@@ -294,12 +294,12 @@ def rewrite_all_comments(
             use_rag,
             system_prompt
         )
-        
-        result += f"### ✏️ Rewritten Content\n```\n{rewritten}\n```\n\n"
-        
+
+        result += f"**✏️ Rewritten Passage**\n\n<div style='font-size: 20px; background: #e8f5e9; padding: 10px; margin: 5px 0;'>{rewritten}</div>\n\n"
+
         if metadata.get('error'):
-            result += f"⚠️ **Error:** {metadata['error']}\n\n"
-        
+            result += f"<div style='font-size: 20px;'>⚠️ <strong>Error:</strong> {metadata['error']}</div>\n\n"
+
         result += "---\n\n"
     
     progress(1.0, desc="Complete!")
