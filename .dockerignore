@@ -1,0 +1,72 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+*.md
+!README.md
+docs/
+
+# Test files
+*.log
+output.json
+tldd_poisoned_vpi.json
+
+# Model artifacts
+TLDD/
+tldd_alpaca.hf/
+golden/
+
+# Jupyter
+*.ipynb
+.ipynb_checkpoints/
+
+# Gradio cache
+.gradio/
+
+# ChromaDB cache (will be created in container)
+chroma_ultrafeedback_cache/
+
+# Other apps not needed for this container
+api_server.py
+chat_app.py
+gradio_app_v1.py
+run_tldd.py
+tldd_old.py
+openhermes_forNoopur.py
+
+# UV lock
+uv.lock
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Streamlit
+ui/gradio_app.py
+ui/confluence_moderator_app.py
+ui/test_comments\ copy.json

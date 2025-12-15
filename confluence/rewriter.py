@@ -5,6 +5,7 @@ Analyzes harmful content and rewrites it to be safe
 
 import sys
 import os
+import json
 from typing import Dict, Tuple, Optional
 
 # Add parent directory to path for imports
@@ -36,6 +37,7 @@ def rewrite_harmful_content(
         temperature: Temperature for generation
         max_tokens: Max tokens for generation
         use_rag: Use RAG retriever
+        system_prompt: Custom system prompt for rewriting
         
     Returns:
         Tuple of (rewritten_content, metadata_dict)
@@ -93,11 +95,11 @@ def process_and_rewrite_comments(
     progress_callback: Optional[object] = None
 ) -> str:
     """
-    Analyze test comments and rewrite harmful ones.
+    Analyze test content and rewrite harmful ones.
     
     Workflow:
-    1. Load test comments
-    2. For each comment:
+    1. Load test content
+    2. For each content:
        a. Analyze with moderate_content()
        b. If harmful, rewrite with rewrite_harmful_content()
        c. Show before/after comparison
@@ -118,20 +120,20 @@ def process_and_rewrite_comments(
         if progress_callback:
             progress_callback(value, desc=desc)
     
-    progress(0, desc="Loading test comments...")
+    progress(0, desc="Loading test content...")
     comments = fetch_test_comments()
     
     if not comments:
-        return "❌ **Error:** Failed to load test comments\n\nCheck that ui/test_comments.json exists."
+        return "❌ **Error:** Failed to load test content\n\nCheck that ui/test_comments.json exists."
     
-    # First pass: analyze all comments to count harmful ones
-    progress(0.1, desc="Analyzing comments...")
+    # First pass: analyze all content to count harmful ones
+    progress(0.1, desc="Analyzing content...")
     harmful_count = 0
     analyses = []
     
     for idx, comment in enumerate(comments, 1):
         progress(0.1 + (0.3 * idx / len(comments)), 
-                desc=f"Analyzing comment {idx}/{len(comments)}...")
+                desc=f"Analyzing content {idx}/{len(comments)}...")
         
         comment_id = comment.get('id', 'Unknown')
         body = comment.get('body', '')
@@ -156,13 +158,13 @@ def process_and_rewrite_comments(
         })
     
     # Build result header
-    result = f"# 🔄 Test Comments Rewriting Results\n\n"
-    result += f"**Total Comments:** {len(comments)}\n\n"
-    result += f"**Harmful Comments Found:** {harmful_count}\n\n"
-    result += f"**Comments Rewritten:** {harmful_count}\n\n"
+    result = f"# 🔄 Test Content Rewriting Results\n\n"
+    result += f"**Total Content:** {len(comments)}\n\n"
+    result += f"**Harmful Content Found:** {harmful_count}\n\n"
+    result += f"**Content Rewritten:** {harmful_count}\n\n"
     result += "---\n\n"
     
-    # Second pass: rewrite harmful comments and format output
+    # Second pass: rewrite harmful content and format output
     rewritten_count = 0
     for idx, analysis in enumerate(analyses, 1):
         comment = analysis['comment']
@@ -173,7 +175,7 @@ def process_and_rewrite_comments(
         comment_id = comment.get('id', 'Unknown')
         body = comment.get('body', '')
         
-        result += f"## Comment {idx} (ID: {comment_id})\n\n"
+        result += f"## Content {idx} (ID: {comment_id})\n\n"
         
         # Original content
         result += f"### 📝 Original Content\n```\n{body}\n```\n\n"
@@ -214,25 +216,6 @@ def process_and_rewrite_comments(
             )
             
             result += f"### ✏️ Rewritten Content\n```\n{rewritten}\n```\n\n"
-            
-            result += f"### 📊 Rewrite Metadata\n"
-            result += f"- **Original Length:** {metadata['original_length']} characters\n"
-            result += f"- **Rewritten Length:** {metadata['rewritten_length']} characters\n"
-            
-            if metadata['reduction_percentage'] > 0:
-                result += f"- **Change:** -{metadata['reduction_percentage']}% (reduced)\n"
-            elif metadata['reduction_percentage'] < 0:
-                result += f"- **Change:** +{abs(metadata['reduction_percentage'])}% (expanded)\n"
-            else:
-                result += f"- **Change:** No length change\n"
-            
-            if metadata.get('filtered_keywords'):
-                result += f"- **Filtered Keywords:** {', '.join(metadata['filtered_keywords'])}\n"
-            
-            if metadata.get('error'):
-                result += f"- **Error:** {metadata['error']}\n"
-            
-            result += "\n"
         else:
             result += f"✅ **No rewriting needed** (content is safe)\n\n"
         
@@ -252,13 +235,13 @@ def rewrite_all_comments(
     progress_callback: Optional[object] = None
 ) -> str:
     """
-    Rewrite ALL test comments without moderation analysis.
+    Rewrite ALL test content without moderation analysis.
     
     Workflow:
-    1. Load test comments
-    2. For each comment:
+    1. Load test content
+    2. For each content:
        a. Rewrite with rewrite_harmful_content()
-       b. Show before/after comparison
+       b. Show before/after comparison with system prompt
     
     Args:
         backend: LLM backend
@@ -266,6 +249,7 @@ def rewrite_all_comments(
         rewrite_temperature: Temperature for rewriting
         max_tokens: Max tokens
         use_rag: Use RAG for rewriting
+        system_prompt: Custom system prompt for rewriting
         progress_callback: Optional callback for progress updates (progress, desc)
         
     Returns:
@@ -275,27 +259,27 @@ def rewrite_all_comments(
         if progress_callback:
             progress_callback(value, desc=desc)
     
-    progress(0, desc="Loading test comments...")
+    progress(0, desc="Loading test content...")
     comments = fetch_test_comments()
     
     if not comments:
-        return "❌ **Error:** Failed to load test comments\n\nCheck that ui/test_comments.json exists."
+        return "❌ **Error:** Failed to load test content\n\nCheck that ui/test_comments.json exists."
     
-    # Build result header
-    result = f"# ✏️ All Comments Rewriting Results\n\n"
-    result += f"**Total Comments:** {len(comments)}\n\n"
-    result += f"**Comments Rewritten:** {len(comments)}\n\n"
+    # Build result header with system prompt
+    result = f"# ✏️ All Content Rewriting Results\n\n"
+    result += f"**Total Content:** {len(comments)}\n\n"
+    result += f"**Content Rewritten:** {len(comments)}\n\n"
     result += "---\n\n"
     
-    # Rewrite all comments
+    # Rewrite all content
     for idx, comment in enumerate(comments, 1):
         progress(idx / len(comments), 
-                desc=f"Rewriting comment {idx}/{len(comments)}...")
+                desc=f"Rewriting content {idx}/{len(comments)}...")
         
         comment_id = comment.get('id', 'Unknown')
         body = comment.get('body', '')
         
-        result += f"## Comment {idx} (ID: {comment_id})\n\n"
+        result += f"## Content {idx} (ID: {comment_id})\n\n"
         
         # Original content
         result += f"### 📝 Original Content\n```\n{body}\n```\n\n"
@@ -313,24 +297,9 @@ def rewrite_all_comments(
         
         result += f"### ✏️ Rewritten Content\n```\n{rewritten}\n```\n\n"
         
-        result += f"### 📊 Rewrite Metadata\n"
-        result += f"- **Original Length:** {metadata['original_length']} characters\n"
-        result += f"- **Rewritten Length:** {metadata['rewritten_length']} characters\n"
-        
-        if metadata['reduction_percentage'] > 0:
-            result += f"- **Change:** -{metadata['reduction_percentage']}% (reduced)\n"
-        elif metadata['reduction_percentage'] < 0:
-            result += f"- **Change:** +{abs(metadata['reduction_percentage'])}% (expanded)\n"
-        else:
-            result += f"- **Change:** No length change\n"
-        
-        if metadata.get('filtered_keywords'):
-            result += f"- **Filtered Keywords:** {', '.join(metadata['filtered_keywords'])}\n"
-        
         if metadata.get('error'):
-            result += f"- **Error:** {metadata['error']}\n"
+            result += f"⚠️ **Error:** {metadata['error']}\n\n"
         
-        result += "\n"
         result += "---\n\n"
     
     progress(1.0, desc="Complete!")

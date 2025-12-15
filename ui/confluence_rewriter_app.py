@@ -1,18 +1,41 @@
 #!/usr/bin/env python3
 
 """
-Gradio Confluence Content Rewriter
-Analyzes test comments, detects harmful content, and rewrites them using AI sanitization
+Gradio SAFEGUARD Content Rewriter
+Analyzes test content, detects harmful content, and rewrites them using AI sanitization
 """
 
 import gradio as gr
 import sys
 import os
+import json
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core import DEFAULT_LLM_TEMPERATURE, DEFAULT_SANITIZER_TEMPERATURE, DEFAULT_MAX_TOKENS, DEFAULT_SYSTEM_PROMPT
-from confluence import process_and_rewrite_comments as _process_and_rewrite, rewrite_all_comments as _rewrite_all
+from SAFEGUARD import process_and_rewrite_comments as _process_and_rewrite, rewrite_all_comments as _rewrite_all
+
+
+def load_test_content():
+    """Load and format test_comments.json for display"""
+    try:
+        test_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'test_comments.json')
+        with open(test_file, 'r') as f:
+            data = json.load(f)
+            comments = data.get('results', [])
+            
+            # Format as readable rows
+            formatted = ""
+            for idx, comment in enumerate(comments, 1):
+                comment_id = comment.get('id', 'Unknown')
+                body = comment.get('body', '')
+                # Truncate long content
+                preview = body[:100] + "..." if len(body) > 100 else body
+                formatted += f"{idx}. ID: {comment_id}\n   {preview}\n\n"
+            
+            return formatted if formatted else "No content found"
+    except Exception as e:
+        return f"Error loading content: {str(e)}"
 
 
 def process_with_moderation_ui(
@@ -24,7 +47,7 @@ def process_with_moderation_ui(
     progress=gr.Progress()
 ):
     """Wrapper for moderation + rewriting with progress tracking"""
-    status_msg = "⏳ **Processing started...** Analyzing and rewriting comments."
+    status_msg = "⏳ **Processing started...** Analyzing and rewriting content."
     yield status_msg, ""
     
     # Use default moderation temperature
@@ -52,7 +75,7 @@ def rewrite_all_ui(
     progress=gr.Progress()
 ):
     """Wrapper for rewriting all content without moderation"""
-    status_msg = "⏳ **Processing started...** Rewriting all comments."
+    status_msg = "⏳ **Processing started...** Rewriting all content."
     yield status_msg, ""
     
     result = _rewrite_all(
@@ -95,25 +118,35 @@ def load_system_prompt():
 
 
 def create_ui():
-    """Create Gradio UI for Confluence content rewriting"""
-    with gr.Blocks(title="Confluence Content Rewriter") as demo:
-        gr.Markdown("# 🔄 Confluence Content Rewriter")
-        gr.Markdown("Analyze and rewrite test comments using AI sanitization")
+    """Create Gradio UI for SAFEGUARD content rewriting"""
+    with gr.Blocks(title="SAFEGUARD Content Rewriter") as demo:
+        gr.Markdown("# 🔄 SAFEGUARD Content Rewriter")
+        gr.Markdown("Analyze and rewrite test content using AI sanitization")
         
         with gr.Row():
             with gr.Column(scale=2):
-                with gr.Tab("Rewrite All"):
-                    gr.Markdown("**Rewrite all comments without moderation analysis**")
+                with gr.Tab("Rewrite All"):                    
+                    # Show test content preview
+                    gr.Markdown("### 📄 Content (from test_comments.json)")
+                    test_content_display = gr.Textbox(
+                        value=load_test_content(),
+                        lines=8,
+                        max_lines=15,
+                        label="Content Preview",
+                        interactive=False,
+                        show_copy_button=True
+                    )
+                    
                     rewrite_all_btn = gr.Button(
-                        "✏️ Rewrite All Comments",
+                        "✏️ Rewrite All Content",
                         variant="primary",
                         size="lg"
                     )
                 
                 with gr.Tab("Analyze & Rewrite"):
-                    gr.Markdown("**Analyze comments first, then rewrite only harmful ones**")
+                    gr.Markdown("**Analyze content first, then rewrite only harmful ones**")
                     rewrite_harmful_btn = gr.Button(
-                        "🔄 Analyze & Rewrite Harmful Comments",
+                        "🔄 Analyze & Rewrite Harmful Content",
                         variant="secondary",
                         size="lg"
                     )
@@ -136,23 +169,29 @@ def create_ui():
                     visible=False
                 )
                 
-                with gr.Accordion("🎨 System Prompt", open=False):
-                    system_prompt = gr.Textbox(
-                        label="System Prompt for Rewriting",
-                        value=load_system_prompt(),
-                        lines=10,
-                        max_lines=20,
-                        placeholder="Enter custom system prompt for the rewriter...",
-                        info="This prompt guides how content is rewritten",
-                        show_copy_button=True
-                    )
-                    
-                    with gr.Row():
-                        save_prompt_btn = gr.Button("💾 Save Prompt", size="sm")
-                        reset_prompt_btn = gr.Button("🔄 Reset to Default", size="sm")
-                    
-                    save_status = gr.Markdown("")
+                gr.Markdown("### 🎨 System Prompt")
+                system_prompt = gr.Textbox(
+                    label="System Prompt for Rewriting",
+                    value=load_system_prompt(),
+                    lines=10,
+                    max_lines=20,
+                    placeholder="Enter custom system prompt for the rewriter...",
+                    info="This prompt guides how content is rewritten",
+                    show_copy_button=True
+                )
                 
+                with gr.Row():
+                    save_prompt_btn = gr.Button("💾 Save Prompt", size="sm")
+                    reset_prompt_btn = gr.Button("🔄 Reset to Default", size="sm")
+                
+                save_status = gr.Markdown("")
+                
+                use_rag = gr.Checkbox(
+                    label="Use Reference Corpus (UltraFeedback, RAG)",
+                    value=False,
+                    info="Optional: Use safe examples to guide rewriting"
+                )
+
                 rewrite_temperature = gr.Slider(
                     minimum=0.0,
                     maximum=1.0,
@@ -168,12 +207,6 @@ def create_ui():
                     value=1024,
                     step=256,
                     label="Max Tokens"
-                )
-                
-                use_rag = gr.Checkbox(
-                    label="Use Reference Corpus (UltraFeedback, RAG)",
-                    value=False,
-                    info="Optional: Use safe examples to guide rewriting"
                 )
         
         def update_backend_visibility(backend_choice):
@@ -230,26 +263,25 @@ def create_ui():
         ### 📝 Two Modes Available
         
         **1. Rewrite All (Recommended)**
-        - Rewrites ALL comments without analyzing them first
+        - Rewrites ALL content without analyzing them first
         - Faster processing
         - Uses the custom system prompt
         - Good for blanket sanitization
+        - Shows system prompt in output
         
         **2. Analyze & Rewrite**
-        - First analyzes each comment for harmful content
-        - Only rewrites comments detected as harmful
+        - First analyzes each content for harmful material
+        - Only rewrites content detected as harmful
         - Slower but more selective
         - Shows moderation analysis results
         
-        ### 🎨 Custom System Prompt
+        ### 🎨 System Prompt
         
-        Edit the system prompt to control how content is rewritten:
-        - Click "System Prompt" accordion to expand
-        - Modify the prompt text
+        The system prompt is now always visible and guides how content is rewritten:
+        - Edit the prompt text directly
         - Click "Save Prompt" to persist changes
         - Click "Reset to Default" to restore original
-        
-        The prompt guides the LLM on how to sanitize content while preserving meaning.
+        - The prompt will be shown in the output when using "Rewrite All" mode
         
         ### 🔧 Setup
         
@@ -259,17 +291,17 @@ def create_ui():
         # OR configure Ollama locally for Ollama backend
         ```
         
-        ### 📊 Example Output
+        ### 📊 Output
         
-        For each comment, you'll see:
-        - **Original Content:** The raw comment text
+        For each content item, you'll see:
+        - **Original Content:** The raw text
         - **Rewritten Content:** Sanitized version
-        - **Rewrite Metadata:** Length changes, filtered keywords, etc.
+        - *(Rewrite All)* System prompt used
         - *(Analyze & Rewrite only)* Moderation analysis with severity level
         
         ### 🧪 Test Data
         
-        The app processes 4 sample comments from `ui/test_comments.json`
+        The app processes 4 sample content items from `ui/test_comments.json`
         """)
     
     return demo
