@@ -10,6 +10,8 @@ LLM tool that analyzes text for prompt injections and harmful content, moderates
 - **Rewriting-based Remediation**: Optional RAG over safe exemplars to guide rewriting
 - **Web application demo**: Runs out of the box with Docker Compose and Gradio
 
+<img width="960" height="484" alt="image" src="https://github.com/user-attachments/assets/80a3db51-6636-4827-b5f6-d9eb540e0b74" />
+
 ## Architecture
 
 ```
