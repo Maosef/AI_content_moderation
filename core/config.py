@@ -36,6 +36,16 @@ RAG_EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 RAG_MAX_SEQ_LENGTH = 512
 RAG_DEFAULT_TOP_K = 3
 
+# Prompt Injection Detection settings
+PROMPT_INJECTION_MODELS = {
+    "llama-guard-2-86m": "meta-llama/Llama-Prompt-Guard-2-86M",  # Best: multilingual, injections + jailbreaks
+    "llama-guard-2-22m": "meta-llama/Llama-Prompt-Guard-2-22M",  # Faster: English only
+    "deberta-v3-v2": "protectai/deberta-v3-base-prompt-injection-v2",  # ProtectAI: injections only
+}
+DEFAULT_PROMPT_INJECTION_MODEL = "llama-guard-2-86m"  # Best overall performance
+DEFAULT_PROMPT_INJECTION_THRESHOLD = 0.5  # 0=lenient, 1=strict
+PROMPT_INJECTION_BLOCK_MODE = "sanitize"  # "block" or "sanitize"
+
 # Generation settings
 DEFAULT_SANITIZER_TEMPERATURE = 0.1
 DEFAULT_LLM_TEMPERATURE = 0.7
