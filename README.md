@@ -1,13 +1,13 @@
 # IRONCLAD Content Moderator
 
-LLM tool that analyzes text for prompt injections and harmful content, moderates/sanitizes via rewriting.
+LLM tool that analyzes text for prompt injections and harmful content, moderates/sanitizes.
+
+<img width="2448" height="1233" alt="image" src="https://github.com/user-attachments/assets/f70b91a0-cd9a-4ce5-a64e-041c83429b23" />
 
 ## Features
 
-- **LLM-Powered Analysis**: Uses OpenAI or Ollama to detect harmful content
-- **Security Checks**: Identifies prompt injections, malicious instructions or harmful content
-- **Severity Classification**: Rates issues as low/medium/high/critical
-- **Rewriting-based Remediation**: Optional RAG over safe exemplars to guide rewriting
+- **LLM-Powered Analysis**: Uses [Llama Prompt Guard 2](https://www.llama.com/docs/model-cards-and-prompt-formats/prompt-guard/) to detect harmful content
+- **Security Checks**: Identifies prompt injections, jailbreaks or other harmful content
 - **Web application demo**: Runs out of the box with Docker Compose and Gradio
 
 ## Architecture
