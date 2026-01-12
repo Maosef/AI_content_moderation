@@ -1,12 +1,10 @@
-version: '3.8'
-
 services:
   llm-guard-api:
     build:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "8001:8000"
+      - "8002:8000"
     environment:
       - PYTHONUNBUFFERED=1
     restart: unless-stopped
