@@ -28,7 +28,7 @@ except ImportError:
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from core.sanitizer import sanitize_query
+from core.rewrite import sanitize_query
 
 app = FastAPI(
     title="LLM Guard Prompt Scanner API",
