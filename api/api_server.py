@@ -9,6 +9,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
+from enum import Enum
 
 # LLM Guard imports
 try:
@@ -22,6 +23,12 @@ try:
 except ImportError:
     LLM_GUARD_AVAILABLE = False
     print("⚠️  LLM Guard not installed. Install with: pip install llm-guard")
+
+# Import sanitize_query from core
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from core.sanitizer import sanitize_query
 
 app = FastAPI(
     title="LLM Guard Prompt Scanner API",
@@ -37,14 +44,33 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+class SanitizationMethod(str, Enum):
+    LLM_GUARD = "llm_guard"
+    TLDD = "tldd"
+
 class ScanRequest(BaseModel):
     prompt: str = Field(..., description="Prompt to scan")
-    enable_prompt_injection: bool = Field(default=True, description="Enable prompt injection detection")
-    enable_toxicity: bool = Field(default=False, description="Enable toxicity detection")
-    enable_banned_topics: bool = Field(default=False, description="Enable banned topics detection")
-    toxicity_threshold: float = Field(default=0.5, ge=0.0, le=1.0, description="Toxicity threshold")
-    banned_topics_list: Optional[List[str]] = Field(default=None, description="List of banned topics")
-    banned_topics_threshold: float = Field(default=0.5, ge=0.0, le=1.0, description="Banned topics threshold")
+    method: SanitizationMethod = Field(default=SanitizationMethod.LLM_GUARD, description="Sanitization method to use")
+
+    # LLM Guard specific parameters
+    enable_prompt_injection: bool = Field(default=True, description="Enable prompt injection detection (LLM Guard)")
+    enable_toxicity: bool = Field(default=False, description="Enable toxicity detection (LLM Guard)")
+    enable_banned_topics: bool = Field(default=False, description="Enable banned topics detection (LLM Guard)")
+    toxicity_threshold: float = Field(default=0.5, ge=0.0, le=1.0, description="Toxicity threshold (LLM Guard)")
+    banned_topics_list: Optional[List[str]] = Field(default=None, description="List of banned topics (LLM Guard)")
+    banned_topics_threshold: float = Field(default=0.5, ge=0.0, le=1.0, description="Banned topics threshold (LLM Guard)")
+
+    # TLDD specific parameters
+    use_rag: bool = Field(default=False, description="Use RAG enhancement (TLDD)")
+    sanitizer_backend: str = Field(default="OpenAI", description="Sanitizer backend: OpenAI or Ollama (TLDD)")
+    sanitizer_model: str = Field(default="gpt-4o-mini", description="Model name for sanitizer (TLDD)")
+    temperature: float = Field(default=0.0, ge=0.0, le=2.0, description="Generation temperature (TLDD)")
+    system_prompt: str = Field(default="", description="Custom system prompt (TLDD)")
+    use_prompt_injection_detection: bool = Field(default=True, description="Enable prompt injection detection (TLDD)")
+    prompt_injection_model: str = Field(default="llama-guard-2-86m", description="Prompt injection detection model (TLDD)")
+    prompt_injection_threshold: float = Field(default=0.5, ge=0.0, le=1.0, description="Prompt injection threshold (TLDD)")
+    block_mode: str = Field(default="block", description="Block mode: block or sanitize (TLDD)")
+    verbose: bool = Field(default=False, description="Enable verbose output")
 
 class ScanResponse(BaseModel):
     sanitized_prompt: str = Field(..., description="Sanitized version of the prompt")
@@ -145,32 +171,67 @@ async def health():
 @app.post("/api/v1/scan", response_model=ScanResponse)
 async def scan(request: ScanRequest):
     """
-    Scan a prompt using LLM Guard scanners.
+    Scan a prompt using either LLM Guard scanners or TLDD sanitization.
 
     Returns the sanitized prompt, validation status, and detailed scan scores.
     """
-    if not LLM_GUARD_AVAILABLE:
-        raise HTTPException(
-            status_code=503,
-            detail="LLM Guard is not available. Please install it with: pip install llm-guard"
+    if request.method == SanitizationMethod.LLM_GUARD:
+        # Use LLM Guard method
+        if not LLM_GUARD_AVAILABLE:
+            raise HTTPException(
+                status_code=503,
+                detail="LLM Guard is not available. Please install it with: pip install llm-guard"
+            )
+
+        sanitized_prompt, is_valid, scan_scores = scan_prompt_with_llm_guard(
+            prompt=request.prompt,
+            enable_prompt_injection=request.enable_prompt_injection,
+            enable_toxicity=request.enable_toxicity,
+            enable_banned_topics=request.enable_banned_topics,
+            toxicity_threshold=request.toxicity_threshold,
+            banned_topics=request.banned_topics_list,
+            banned_topics_threshold=request.banned_topics_threshold,
         )
 
-    sanitized_prompt, is_valid, scan_scores = scan_prompt_with_llm_guard(
-        prompt=request.prompt,
-        enable_prompt_injection=request.enable_prompt_injection,
-        enable_toxicity=request.enable_toxicity,
-        enable_banned_topics=request.enable_banned_topics,
-        toxicity_threshold=request.toxicity_threshold,
-        banned_topics=request.banned_topics_list,
-        banned_topics_threshold=request.banned_topics_threshold,
-    )
+        return ScanResponse(
+            sanitized_prompt=sanitized_prompt,
+            is_valid=is_valid,
+            scan_scores=scan_scores,
+            llm_guard_available=LLM_GUARD_AVAILABLE
+        )
 
-    return ScanResponse(
-        sanitized_prompt=sanitized_prompt,
-        is_valid=is_valid,
-        scan_scores=scan_scores,
-        llm_guard_available=LLM_GUARD_AVAILABLE
-    )
+    elif request.method == SanitizationMethod.TLDD:
+        # Use TLDD sanitize_query method
+        try:
+            sanitized_prompt = sanitize_query(
+                query=request.prompt,
+                use_rag=request.use_rag,
+                sanitizer_backend=request.sanitizer_backend,
+                sanitizer_model=request.sanitizer_model,
+                temperature=request.temperature,
+                system_prompt=request.system_prompt,
+                use_prompt_injection_detection=request.use_prompt_injection_detection,
+                prompt_injection_model=request.prompt_injection_model,
+                prompt_injection_threshold=request.prompt_injection_threshold,
+                block_mode=request.block_mode,
+                verbose=request.verbose
+            )
+
+            # Check if the prompt was blocked
+            is_valid = not sanitized_prompt.startswith("[BLOCKED:")
+            scan_scores = {"method": "TLDD", "blocked": not is_valid}
+
+            return ScanResponse(
+                sanitized_prompt=sanitized_prompt,
+                is_valid=is_valid,
+                scan_scores=scan_scores,
+                llm_guard_available=LLM_GUARD_AVAILABLE
+            )
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"TLDD sanitization error: {str(e)}"
+            )
 
 if __name__ == "__main__":
     import uvicorn
