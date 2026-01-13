@@ -2,3 +2,5 @@ chroma_ultrafeedback_cache/*
 */__pycache__/*
 
 golden/golden_retriever.log
+data
+.env

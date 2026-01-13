@@ -4,7 +4,7 @@ LLM tool that analyzes text for prompt injections and harmful content, moderates
 
 ## Features
 
-- **Prompt Injection Detection**: Uses fine-tuned DeBERTa-based model to detect prompt injections and jailbreak attempts
+- **Prompt Injection Detection**: Uses a fine-tuned DeBERTa-based model to detect prompt injections and jailbreak attempts
   - 95%+ accuracy on unseen data, multilingual support
   - Fast inference: 50-100ms per query on CPU, 10-30ms on GPU
 
@@ -34,8 +34,7 @@ The API will be available at: **http://localhost:8000**
 
 ```bash
 # Run tests (TLDD tests will be skipped without API key)
-cd api
-python3 test_client.py
+python3 tests/test_client.py
 ```
 
 #### Run All Tests (Including TLDD)
@@ -251,9 +250,10 @@ The API supports two sanitization methods (configured via `method` field):
    - Optional RAG enhancement (requires `golden` package)
    - Block or sanitize modes
 
-Environment variables can be set in `docker-compose.yml`:
+Environment variables can be set in `docker-compose.yml` or passed from your shell:
 - `PYTHONUNBUFFERED=1` - Immediate log output
-- `OPENAI_API_KEY` - Required for TLDD with OpenAI backend
+- `OPENAI_API_KEY` - Required for TLDD with OpenAI backend (passed from host environment)
+- `HF_TOKEN` - Hugging Face token for gated models like Llama Prompt Guard (optional)
 - `OLLAMA_HOST` - Ollama endpoint for TLDD (default: `http://host.docker.internal:11434`)
 
 ### Troubleshooting

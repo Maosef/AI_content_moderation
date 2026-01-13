@@ -5,6 +5,7 @@ Supports multiple detection models: Llama Prompt Guard 2, DeBERTa-v3
 
 from typing import Tuple, Optional
 import warnings
+import os
 
 # Suppress warnings for cleaner output
 warnings.filterwarnings('ignore')
@@ -64,13 +65,22 @@ class PromptInjectionDetector:
 
         print(f"Loading prompt injection detector: {model_name} on {self.device}...")
 
-        # Load model and tokenizer
-        self.tokenizer = AutoTokenizer.from_pretrained(model_path)
-        self.model = AutoModelForSequenceClassification.from_pretrained(model_path)
-        self.model.to(self.device)
-        self.model.eval()
+        # Get Hugging Face token from environment (for gated models)
+        hf_token = os.environ.get("HF_TOKEN") or os.environ.get("HUGGINGFACE_TOKEN")
 
-        print(f"✅ Prompt injection detector loaded: {model_name}")
+        # Load model and tokenizer (with token if available)
+        try:
+            self.tokenizer = AutoTokenizer.from_pretrained(model_path, token=hf_token)
+            self.model = AutoModelForSequenceClassification.from_pretrained(model_path, token=hf_token)
+            self.model.to(self.device)
+            self.model.eval()
+            print(f"✅ Prompt injection detector loaded: {model_name}")
+        except Exception as e:
+            if "gated" in str(e).lower() or "restricted" in str(e).lower():
+                print(f"⚠️  Model {model_name} requires Hugging Face authentication.")
+                print(f"    Set HF_TOKEN environment variable with your HF token.")
+                print(f"    Or use an open model like 'deberta-v3-v2'")
+            raise
 
     def detect(self, query: str) -> Tuple[bool, float, str]:
         """
