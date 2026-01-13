@@ -7,6 +7,12 @@ services:
       - "8000:8000"
     environment:
       - PYTHONUNBUFFERED=1
+      # Pass OpenAI API key from host environment (for TLDD method)
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      # Pass Hugging Face token from host environment (for gated models like Llama Prompt Guard)
+      - HF_TOKEN=${HF_TOKEN:-}
+      # Ollama endpoint (if using Ollama backend)
+      - OLLAMA_HOST=${OLLAMA_HOST:-http://host.docker.internal:11434}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
