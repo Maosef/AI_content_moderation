@@ -23,6 +23,9 @@ RUN uv pip install --system --no-cache -r requirements.txt
 # Copy core module (needed for sanitize_query import)
 COPY core/ ./core/
 
+# Copy golden package (needed for RAG functionality)
+COPY golden/ ./golden/
+
 # Copy API application code
 COPY api/api_server.py .
 

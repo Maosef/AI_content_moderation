@@ -232,22 +232,22 @@ The data sanitizer includes **prompt injection detection** using state-of-the-ar
 data_sanitizer/
 ├── api/                    # FastAPI REST API server
 │   └── api_server.py       # API endpoints for LLM Guard & TLDD
-├── confluence/             # Confluence integration module
-│   ├── __init__.py         # Module exports
-│   ├── client.py           # API client (fetch pages, comments, parse URLs)
-│   ├── config.py           # Credential management from env vars
-│   └── README.md           # Module documentation
 ├── ui/
 │   ├── confluence_moderator_app.py  # Gradio UI
 │   └── test_comments.json           # Sample data for testing
 ├── core/                   # Shared LLM client & sanitization logic
 │   ├── sanitizer.py        # LLM Guard integration and prompt injection detection
-│   ├── rewrite.py          # TLDD sanitization with RAG support (optional)
+│   ├── rewrite.py          # TLDD sanitization with RAG support
 │   ├── llm_client.py       # LLM client abstraction
+│   ├── rag.py              # RAG functionality using golden
+│   └── ...
+├── golden/                 # Golden Retriever package for RAG
+│   ├── golden_retriever.py # Main retriever implementation
+│   ├── golden_embeddings.py # Embedding generation
 │   └── ...
 ├── Dockerfile              # Docker configuration for API
 ├── docker-compose.yml      # Docker Compose for API deployment
-└── requirements.txt        # Python dependencies for API
+└── requirements.txt        # Python dependencies (includes RAG)
 ```
 
 ## API Server
@@ -409,8 +409,14 @@ ports:
   - "8003:8000"  # Use 8003 instead
 ```
 
-#### RAG Functionality Not Available
-RAG enhancement requires the `golden` package (not included by default). The API will work without it, but `use_rag: true` will be ignored with a warning.
+#### RAG Functionality
+RAG enhancement is now fully available in the Docker image. The `golden` package and all its dependencies (langchain, chromadb) are included. To use RAG:
+
+1. Set up your RAG database (see RAG setup documentation)
+2. Mount the database directory to the container
+3. Enable RAG in your requests: `"use_rag": true`
+
+Note: RAG requires a pre-built vector database. Without a configured database, the API will fall back to standard sanitization.
 
 # Docker Deployment Guide (Demo App)
 

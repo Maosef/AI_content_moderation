@@ -1,12 +1,12 @@
 """
 TLDD rewriting and sanitization with RAG support
-Requires the 'golden' package for RAG functionality
 """
 
 from typing import Optional
 
 from .llm_client import get_llm_client, llm_generate
 from .prompt_injection import detect_prompt_injection
+from .rag import retrieve_top_k, build_rag_prompt
 from .config import (
     DEFAULT_SYSTEM_PROMPT,
     DEFAULT_SANITIZER_TEMPERATURE,
@@ -16,12 +16,7 @@ from .config import (
     PROMPT_INJECTION_BLOCK_MODE,
 )
 
-# Optional RAG imports
-try:
-    from .rag import retrieve_top_k, build_rag_prompt
-    RAG_AVAILABLE = True
-except ImportError:
-    RAG_AVAILABLE = False
+RAG_AVAILABLE = True
 
 
 def sanitize_query(
@@ -81,21 +76,17 @@ def sanitize_query(
     # Step 2: Get sanitizer client
     sanitizer_client, model = get_llm_client(sanitizer_backend, sanitizer_model)
 
-    # Step 3: RAG enhancement (if enabled and available)
+    # Step 3: RAG enhancement (if enabled)
     if use_rag:
-        if not RAG_AVAILABLE:
-            if verbose:
-                print("⚠️  RAG requested but not available (missing 'golden' package)")
-        else:
-            top_k_docs = retrieve_top_k(query, k=3)
-            if top_k_docs:
-                rag_prompt = build_rag_prompt(top_k_docs, query)
-                sanitized = llm_generate(
-                    sanitizer_client, model, "", rag_prompt,
-                    temperature=temperature, max_tokens=DEFAULT_SANITIZER_MAX_TOKENS
-                )
-                if sanitized:
-                    return sanitized
+        top_k_docs = retrieve_top_k(query, k=3)
+        if top_k_docs:
+            rag_prompt = build_rag_prompt(top_k_docs, query)
+            sanitized = llm_generate(
+                sanitizer_client, model, "", rag_prompt,
+                temperature=temperature, max_tokens=DEFAULT_SANITIZER_MAX_TOKENS
+            )
+            if sanitized:
+                return sanitized
 
     # Step 4: Default sanitization (with or without RAG)
     prompt = system_prompt if system_prompt else DEFAULT_SYSTEM_PROMPT
