@@ -30,21 +30,11 @@ docker compose down
 
 The API will be available at: **http://localhost:8000**
 
-#### Run Tests (LLM Guard only)
+#### Run All Tests
 
 ```bash
 # Run tests (TLDD tests will be skipped without API key)
-python3 tests/test_client.py
-```
-
-#### Run All Tests (Including TLDD)
-
-```bash
-# Set your OpenAI API key
-export OPENAI_API_KEY=sk-your-key-here
-
-# Run all tests including TLDD
-python3 test_client.py
+python3 tests/test_api.py
 ```
 
 The test suite includes:
