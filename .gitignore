@@ -1,6 +1,30 @@
 chroma_ultrafeedback_cache/*
-*/__pycache__/*
-
-golden/golden_retriever.log
-data
 .env
+
+# Specifies the intentionally directory and file patterns that Git
+# should not track. Files already tracked by Git are not affected.
+ 
+# Visual Studio Code generated directories:
+.vscode/
+ 
+# Python generated files and directories:
+*/__pycache__/
+*.pyc
+*.egg-info/
+ 
+# Virtual environment directories:
+.env/
+.env.bak/
+.venv/
+.venv.bak/
+env/
+env.bak/
+venv/
+venv.bak/
+ 
+# Log files and directories
+*.log
+log/**
+ 
+# Project specific files and directories:
+data

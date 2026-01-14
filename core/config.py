@@ -28,6 +28,7 @@ DEFAULT_LLM_SYSTEM_PROMPT = "You are a helpful assistant."
 # Default models
 DEFAULT_OLLAMA_MODEL = "huihui_ai/qwen3-abliterated:8b"
 DEFAULT_OPENAI_MODEL = "gpt-4o"
+DEFAULT_HUGGINGFACE_MODEL = "meta-llama/Llama-3.1-8B-Instruct"
 DEFAULT_SANITIZER_MODEL = "huihui_ai/qwen3-abliterated:8b"
 
 # RAG settings
